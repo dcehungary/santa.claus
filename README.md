@@ -2,4 +2,4 @@
 
 A félév során számtalan eszközt és technológiát ismertünk meg, erről tartottunk bemutatót.
 
-A bemutató során felépítettünk egy olyan webes alapú tartalomszolgáltatást, mely magas rendelkezésre állással rendelkezik a kritikus üzleti folyamatok támogatásához.
+A bemutató során a helyszínen élőben felépítettünk egy olyan webes alapú tartalomszolgáltatást, mely magas rendelkezésre állással rendelkezik a kritikus üzleti folyamatok támogatásához.
