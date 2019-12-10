@@ -9,4 +9,5 @@ letölti és telepíti a helm az írás időpontjában legfrissebb stabil verzi�
 kubernetes master nodera.
 
 ===============================
+
 Customized for our demo network on vCenter, added nfs-utils as prerequisite for the nfs-client-provisioner helm chart needed for dynamic persistent volume provisioning, and downloading and installing the latest version of helm on the master node.
