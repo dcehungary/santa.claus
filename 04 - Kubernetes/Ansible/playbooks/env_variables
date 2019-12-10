@@ -1,0 +1,20 @@
+#Enter the IP Address of the Kubernetes Master node to the ad_addr variable.
+ad_addr: 172.17.2.200
+cidr_v: 10.244.0.0/16
+
+packages:
+- kubeadm
+- kubectl
+- wget
+- nfs-utils
+
+services:
+- docker
+- kubelet
+
+ports:
+- "6443/tcp"
+- "3260/tcp"
+- "10250/tcp"
+
+token_file: join_token
