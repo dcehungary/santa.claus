@@ -1,0 +1,110 @@
+##############################################################################################################
+#
+# FORGATÓKÖNYV No.1 + iSCSI + NFS server + crypt	
+#
+# Centos7 iscsi target és NFS server létrehozásával kapcsolatos függőségek a feloldása
+#
+# Itt minden kiadott parancs megtalálható amivel előkészítem a targetcli és nfs-server konfigurálhatóságát
+#
+##############################################################################################################
+
+
+# 1) be kell állítani az ip(ke)-t, route-ot és dns feloldást
+
+nmtui
+
+# 2) Napra készre hozom a rendszert és telepítem a szükséges csomagokat
+
+yum update && yum upgrade && yum -y install ntpdate mdadm targetcli mc cryptsetup nfs-utils nfs-utils-lib
+
+# localectl set-keymap us
+
+mkdir /var/nfsshare
+chown root:root /var/nfsshare
+chmod 777 /var/nfsshare
+# /etc/exports 
+/var/nfsshare * (rw,sync,no_root_squash)
+
+systemctl enable nfs-server
+systemctl start nfs-server
+
+timedatectl set-timezone Europe/Budapest
+
+# 3) beállítom a crontab-ba az időszinkront
+
+crontab -e
+00 03 * * * /usr/sbin/ntpdate hu.pool.ntp.org
+
+# 4) tűzfalon a target engedélyezése
+
+firewall-cmd --permanent --add-service={iscsi-target,mountd,nfs,rpc-bind}
+firewall-cmd --reload
+
+
+# 5) indítom a target service-t
+
+systemclt enable target
+systemctl start target
+
+# 6) fdisk-el létrehozom a riad particiókat a 8 disk-en
+fdisk /dev/sd{b,c,d,e,f,g,h,i}
+
+# 7) létrehozom a két darabb raid1-es tömböt
+mdadm --create md127 --level=6 --riad-devices=8 /dev/sdb1 /dev/sdc1 /dev/sdd1 /dev/sde1 /dev/sdf1 /dev/sdg1 /dev/sdh1 /dev/sdh1
+ 
+# 8) létrehozom lvm particiókat /dev/mapper
+fdsik /dev/md127
+
+# 9) lvm-hez hozzáadom a volume-okat
+pvcreate /dev/md127p1
+
+# 10) létrehozom a vloume group-ot
+vgcreate share /dev/md127p1
+
+# 11) létrehozom a lv köteteket a share vg group-ban
+lvcreate -L40G -n 20g share # sql quorum disk
+lvcreate -L40G -n 40g share # sql data disk
+lvcreate -L40G -n kub40g share # nfs a Kubernetes-nek
+
+# 12) újraindítás és ellenőrzés hogy a reboot után minden rendbe van e?
+reboot
+
+# 13) titkosítás beállítása
+cryptsetup --verbose --cipher aes-xts-plain64 --key-size 512 --hash sha512 --iter-time 5000 --use-random luksFormat /dev/mapper/share--20g
+cryptsetup --verbose --cipher aes-xts-plain64 --key-size 512 --hash sha512 --iter-time 5000 --use-random luksFormat /dev/mapper/share--40g
+cryptsetup --verbose --cipher aes-xts-plain64 --key-size 512 --hash sha512 --iter-time 5000 --use-random luksFormat /dev/mapper/share--kub40g
+
+# 14) titkosított disk fel mapperelése titkos ként
+cryptsetup luksOpen /dev/mapper/share--20g win20gtitkos
+cryptsetup luksOpen /dev/mapper/share--40g win40gtitkos
+cryptsetup luksOpen /dev/mapper/share--kub40g kub40gtitkos
+
+# 15) /etc/crypttab kiegészítés ezzel így bekéri a boot közben disk jelszót
+win20gtitkos /dev/mapper/share--20g none luks
+win40gtitkos /dev/mapper/share--40g none luks
+kub40gtitkos /dev/mapper/share--40g none luks
+
+# 17) fájl rendszer létrehozása
+mkfs -t ext4 /dev/mapper/kub40gtitkos
+
+# 18) létrehozom a nfsshare könyvtárat
+mkdir /var/nfsshare
+
+# 19) mount-olom a /var/nfsshare 
+mount /dev/mapper/kub40gtitkos
+
+# 20) /etc/exportfs szerkesztése
+/var/nfsshare *(rw,sync,no_root_squash)
+
+##############################################################################################################
+#
+# itt a vége a előkészületnek innen már csak a targetcli konfigurálása van
+#
+##############################################################################################################
+
+# sql node-ok iqn-i
+iqn.1991-05.com.microsoft:sqlnode1
+iqn.1991-05.com.microsoft:sqlnode2
+
+# target iqn-je
+iqn.2019-12.local.imdc:target.00
