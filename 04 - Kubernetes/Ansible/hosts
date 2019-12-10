@@ -1,0 +1,6 @@
+[kubernetes-master-nodes]
+k8s-master.santa.claus ansible_host=172.17.2.200
+
+[kubernetes-worker-nodes]
+k8s-worker-1.santa.claus ansible_host=172.17.1.201
+k8s-worker-2.santa.claus ansible_host=172.17.2.202
